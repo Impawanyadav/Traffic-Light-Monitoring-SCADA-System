@@ -1,0 +1,41 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Card Styling and Smooth Color Transitions */
+.traffic-card {
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 12px;
+}
+
+/* Custom Status Colors with Neon Glow Effects */
+.status-green {
+    background-color: #198754 !important;
+    box-shadow: 0 0 20px rgba(25, 135, 84, 0.4);
+    color: white;
+}
+
+.status-yellow {
+    background-color: #ffc107 !important;
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
+    color: #212529; /* Dark text for contrast */
+}
+
+.status-red {
+    background-color: #dc3545 !important;
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.4);
+    color: white;
+}
+
+.status-inactive {
+    background-color: #343a40 !important;
+    border: 1px solid #495057;
+    color: #adb5bd;
+}
+
+.timer-display {
+    font-size: 4rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums; /* Keeps numbers from shifting width */
+}

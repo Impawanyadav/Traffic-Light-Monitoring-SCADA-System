@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart City Traffic Control | SCADA</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dark text-light">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4 shadow">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1 text-uppercase fw-bold">
+                🚦 Traffic SCADA System <span class="badge bg-primary ms-2 fs-6">Edge Node Active</span>
+            </span>
+            
+            <!-- Right Side: Clock & Logout -->
+            <div class="d-flex align-items-center">
+                <span class="text-secondary" id="system-clock">Syncing time...</span>
+                <a href="/logout" class="btn btn-outline-danger btn-sm ms-3 fw-bold px-3">Log Out</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4">
+        <div class="row mb-3">
+            <div class="col">
+                <h4 class="text-secondary border-bottom border-secondary pb-2">Active Intersections</h4>
+            </div>
+        </div>
+        
+        <!-- Javascript will inject the dynamic traffic cards here -->
+        <div class="row g-4" id="traffic-container">
+            <!-- Loading placeholder -->
+            <div class="col-12 text-center text-secondary py-5">
+                <div class="spinner-border mb-3" role="status"></div>
+                <h5>Establishing Edge Connection...</h5>
+            </div>
+        </div>
+    </div>
+
+    <!-- SockJS and STOMP for WebSockets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- Custom Edge Engine JS -->
+    <script src="traffic.js"></script>
+</body>
+</html>
