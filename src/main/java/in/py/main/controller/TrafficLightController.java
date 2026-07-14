@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/traffic")
@@ -15,10 +15,9 @@ import java.util.List;
 public class TrafficLightController {
 
     private final TrafficLightService trafficLightService;
-
     
     @GetMapping("/initial-data")
-    public List<TrafficLight> getInitialData() {
+    public Map<String, TrafficLight> getInitialData() {
         return trafficLightService.getLatestDataCache();
     }
 }

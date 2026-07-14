@@ -1,4 +1,5 @@
-let trafficDataCache = [];
+
+let trafficDataCache = {}; 
 let stompClient = null;
 let serverClockOffset = 0; 
 
@@ -13,46 +14,16 @@ document.addEventListener("DOMContentLoaded", function() {
     }, 1000);
 });
 
-// The Deduplication Engine: Guarantees only ONE entry per Light ID exists in the cache
-function mergeIntoCache(incomingData) {
-    let incomingArray = Array.isArray(incomingData) ? incomingData : [incomingData];
-    let uiNeedsRebuild = false;
-
-    incomingArray.forEach(newLight => {
-        // Failsafe: Checks for either 'trafficLightId' or 'id' to prevent undefined errors
-        let targetId = String(newLight.trafficLightId || newLight.id);
-        
-        let existingIndex = trafficDataCache.findIndex(
-            light => String(light.trafficLightId || light.id) === targetId
-        );
-
-        if (existingIndex !== -1) {
-            // Light exists. Overwrite the old log with this new log.
-            if (trafficDataCache[existingIndex].status !== newLight.status) {
-                uiNeedsRebuild = true;
-            }
-            trafficDataCache[existingIndex] = newLight;
-        } else {
-            // Brand new light ID, add it to the cache
-            trafficDataCache.push(newLight);
-            uiNeedsRebuild = true;
-        }
-    });
-
-    return uiNeedsRebuild;
-}
-
 function fetchInitialData() {
     fetch('/api/traffic/initial-data')
         .then(response => response.json())
         .then(data => {
-            // 1. Pass the initial database load through our Deduplication Engine
-            trafficDataCache = []; // Clear any garbage
-            mergeIntoCache(data);
+            // Because it's a Map, just assign it directly. No loop/search needed.
+            trafficDataCache = data; 
             
-            // 2. Set Server Offset
-            if (trafficDataCache.length > 0 && trafficDataCache[0].serverTimeMs) {
-                serverClockOffset = trafficDataCache[0].serverTimeMs - Date.now();
+            let keys = Object.keys(data);
+            if (keys.length > 0 && data[keys[0]].serverTimeMs) {
+                serverClockOffset = data[keys[0]].serverTimeMs - Date.now();
             }
             
             buildDashboardUI();
@@ -67,20 +38,16 @@ function connectWebSocket() {
 
     stompClient.connect({}, function (frame) {
         stompClient.subscribe('/topic/trafficlogs', function (response) {
+            // Replace old Map with the new incoming Map
             let newData = JSON.parse(response.body);
-
-            // Pass the WebSocket update through the exact same Deduplication Engine
-            let requiresRebuild = mergeIntoCache(newData);
+            trafficDataCache = newData; 
             
-            // Recalibrate clock
-            let dataArray = Array.isArray(newData) ? newData : [newData];
-            if (dataArray.length > 0 && dataArray[0].serverTimeMs) {
-                serverClockOffset = dataArray[0].serverTimeMs - Date.now();
+            let keys = Object.keys(newData);
+            if (keys.length > 0 && newData[keys[0]].serverTimeMs) {
+                serverClockOffset = newData[keys[0]].serverTimeMs - Date.now();
             }
             
-            if (requiresRebuild) {
-                buildDashboardUI();
-            }
+            buildDashboardUI();
         });
     });
 }
@@ -92,11 +59,13 @@ function buildDashboardUI() {
     container.innerHTML = ""; 
     let activeCount = 0;
 
-    trafficDataCache.forEach(light => {
-        if (light.status.toUpperCase() !== "ACTIVE") return;
+    // Iterate over the HashMap values
+    Object.values(trafficDataCache).forEach(light => {
+        // STRICT FILTER: Display ONLY if Active
+        if (!light.status || light.status.toUpperCase() !== "ACTIVE") return;
+        
         activeCount++;
-
-        let lightId = light.trafficLightId || light.id; // Failsafe ID grabber
+        let lightId = light.trafficLightId || light.id; 
 
         let cardHTML = `
             <div class="col-md-4 col-lg-3">
@@ -132,18 +101,24 @@ function buildDashboardUI() {
 function edgeComputeTimers() {
     let now = Date.now() + serverClockOffset;
 
-    trafficDataCache.forEach(light => {
-        if (light.status.toUpperCase() !== "ACTIVE") return;
+    Object.values(trafficDataCache).forEach(light => {
+        if (!light.status || light.status.toUpperCase() !== "ACTIVE") return;
 
         let lightId = light.trafficLightId || light.id;
 
-        let safeTime = light.startTime.padStart(8, '0');
+        // Parse variables for validation
+        let safeTime = (light.startTime || "").padStart(8, '0');
         let dateString = `${light.date}T${safeTime}`;
         let startMs = new Date(dateString).getTime();
+        
+        let gTime = parseInt(light.durationGreen);
+        let yTime = parseInt(light.durationYellow);
+        let rTime = parseInt(light.durationRed);
 
-        if (isNaN(startMs)) {
-            updateCardUI(lightId, "status-inactive", "DATE ERROR", "--");
-            return; 
+        // THE DIAGNOSTIC SHIELD: If ANY data is corrupt, fallback to SYNCING box
+        if (isNaN(gTime) || isNaN(yTime) || isNaN(rTime) || isNaN(startMs)) {
+            updateCardUI(lightId, "status-inactive", "SYNCING...", "--");
+            return; // Halt calculation for this specific card
         }
 
         let elapsedMs = now - startMs;
@@ -154,13 +129,12 @@ function edgeComputeTimers() {
         }
 
         let elapsedSeconds = Math.floor(elapsedMs / 1000);
-
-        let gTime = light.durationGreen;
-        let yTime = light.durationYellow;
-        let rTime = light.durationRed;
         let totalCycle = gTime + yTime + rTime;
         
-        if (totalCycle === 0) return; 
+        if (totalCycle === 0) {
+            updateCardUI(lightId, "status-inactive", "SYNCING...", "--");
+            return; 
+        }
 
         let currentCyclePosition = elapsedSeconds % totalCycle;
         let currentColor = "";
